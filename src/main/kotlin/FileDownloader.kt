@@ -1,13 +1,8 @@
 @file:Suppress("DEPRECATION")
 
-import kotlinx.coroutines.CoroutineExceptionHandler
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import java.io.FileOutputStream
+import java.io.InputStream
 import java.net.URL
 import kotlin.system.measureTimeMillis
 
@@ -40,6 +35,7 @@ private suspend fun downloadFile(destination: String?, url: String) {
             val job = scope.launch {
                 download(URL(url), destination)
             }
+            //delay(100) join.cancelAndJoin() // uncomment to test the cancellation exception
             job.join()
         }
     }
@@ -50,20 +46,31 @@ suspend fun download(
     url: URL = URL("https://www.apache.org/licenses/LICENSE-2.0.txt"),
     downloadPath: String = "${System.getProperty("user.home")}/Downloads/apache_license.txt" // default path is /Users/jmohiuddinansari/Downloads/apache_license.txt
 ) {
+    var inputStream: InputStream? = null
+    var outputStream: FileOutputStream? = null
     withContext(Dispatchers.IO) {
-        val connection = url.openConnection()
-        val inputStream = connection.getInputStream()
+        try {
+            val connection = url.openConnection()
+            inputStream = connection.getInputStream()
 
-        // Use the user's home directory for downloads on macOS
-        val outputStream = FileOutputStream(downloadPath)
-        val buffer = ByteArray(1024)
-        var bytesRead = inputStream.read(buffer)
-        while (bytesRead != -1) {
-            outputStream.write(buffer, 0, bytesRead)
-            bytesRead = inputStream.read(buffer)
+            // Use the user's home directory for downloads on macOS
+            outputStream = FileOutputStream(downloadPath)
+            val buffer = ByteArray(1024)
+            var bytesRead = inputStream?.read(buffer)
+            while (bytesRead != -1) {
+                // ensureActive checks is coroutine scope is still active , if not it will throw cancellation exception
+                ensureActive()
+                outputStream?.write(buffer, 0, bytesRead ?: 0)
+                bytesRead = inputStream?.read(buffer)
+            }
+            outputStream?.close()
+            inputStream?.close()
+            println("File downloaded successfully to : $downloadPath")
+        } catch (ex: CancellationException) {
+            println("Cancellation Exception : ${ex.message}")
+        } finally {
+            outputStream?.close()
+            inputStream?.close()
         }
-        outputStream.close()
-        inputStream.close()
-        println("File downloaded successfully to : $downloadPath")
     }
 }
