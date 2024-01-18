@@ -28,7 +28,7 @@ fun main() = runBlocking {
 
 suspend fun promptUser(message: String): String {
     println(message)
-    return withContext(Dispatchers.IO) { readLine() ?: "" }
+    return withContext(Dispatchers.IO) { readlnOrNull() ?: "" }
 }
 
 private suspend fun downloadFile(destination: String?, url: String) {
