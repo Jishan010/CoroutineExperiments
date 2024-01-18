@@ -13,19 +13,22 @@ val scope =
 
 fun main() = runBlocking {
     while (true) {
-        println("Please Input url of your choice")
-        val url = readln()
-        println("please provide save destination")
-        val destination = readlnOrNull()
+        val url = promptUser("Please Input url of your choice")
+        val destination = promptUser("please provide save destination")
         println("url is $url and destination is  $destination")
 
         downloadFile(destination, url)
 
-        println("do you want to exit ? Y and N")
-        if (readlnOrNull() == "Y" || readlnOrNull() == null) {
+        val exit = promptUser("do you want to exit ? Y and N")
+        if (exit == "Y" || exit == "") {
             break
         }
     }
+}
+
+suspend fun promptUser(message: String): String {
+    println(message)
+    return withContext(Dispatchers.IO) { readLine() ?: "" }
 }
 
 private suspend fun downloadFile(destination: String?, url: String) {
